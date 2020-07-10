@@ -70,7 +70,7 @@ python evaluate_cityscapes.py --model DeeplabVGG --restore-from ./model/GTA2City
 
 * Compute the IoU on Cityscapes (thanks to the code from [VisDA Challenge](http://ai.bu.edu/visda-2017/))
 ```
-python compute_iou.py ./data/Cityscapes/data/gtFine/val result/cityscapes
+python compute_iou.py /dataset/cityscapes/gtFine/val result/cityscapes
 ```
 
 ## Training Examples
