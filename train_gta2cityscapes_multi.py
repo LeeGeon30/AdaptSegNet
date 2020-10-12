@@ -18,6 +18,8 @@ import random
 from model.deeplab_multi import DeeplabMulti
 from model.discriminator import FCDiscriminator
 from utils.loss import CrossEntropy2d
+from utils.save_cityscapes_results_for_evaluation import save_cityscapes_results_for_evaluation
+from compute_iou_for_evaluation import compute_mIoU
 from dataset.gta5_dataset import GTA5DataSet
 from dataset.cityscapes_dataset import cityscapesDataSet
 
@@ -170,9 +172,12 @@ def adjust_learning_rate_D(optimizer, i_iter):
         optimizer.param_groups[1]['lr'] = lr * 10
 
 
+# +
 def main():
     """Create the model and start the training."""
-
+    
+    best_mIoU = 0
+    
     w, h = map(int, args.input_size.split(','))
     input_size = (w, h)
 
@@ -399,18 +404,33 @@ def main():
         'iter = {0:8d}/{1:8d}, loss_seg1 = {2:.3f} loss_seg2 = {3:.3f} loss_adv1 = {4:.3f}, loss_adv2 = {5:.3f} loss_D1 = {6:.3f} loss_D2 = {7:.3f}'.format(
             i_iter, args.num_steps, loss_seg_value1, loss_seg_value2, loss_adv_target_value1, loss_adv_target_value2, loss_D_value1, loss_D_value2))
 
-        if i_iter >= args.num_steps_stop - 1:
-            print ('save model ...')
-            torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '.pth'))
-            torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D1.pth'))
-            torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D2.pth'))
-            break
+        if i_iter % 10000 == 0 and i_iter != 0:
+            save_cityscapes_results_for_evaluation(model)
+            latest_mIoU = compute_mIoU()
+            if latest_mIoU > best_mIoU :
+                best_mIoU = latest_mIoU
+                torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_best_' + str(i_iter) + '.pth'))
+                torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_best_' + str(i_iter) + '_D1.pth'))
+                torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_best_' + str(i_iter) + '_D2.pth'))
+            
+            torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_latest_' + str(i_iter) + '.pth'))
+            torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_latest_' + str(i_iter) + '_D1.pth'))
+            torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_latest_' + str(i_iter) + '_D2.pth'))
 
-        if i_iter % args.save_pred_every == 0 and i_iter != 0:
-            print ('taking snapshot ...')
-            torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '.pth'))
-            torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D1.pth'))
-            torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D2.pth'))
+                
+#         if i_iter >= args.num_steps_stop - 1:
+#             print ('save model ...')
+#             torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '.pth'))
+#             torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D1.pth'))
+#             torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D2.pth'))
+#             break
+
+#         if i_iter % args.save_pred_every == 0 and i_iter != 0:
+#             print ('taking snapshot ...')
+#             torch.save(model.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '.pth'))
+#             torch.save(model_D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D1.pth'))
+#             torch.save(model_D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D2.pth'))
+# -
 
 
 if __name__ == '__main__':
